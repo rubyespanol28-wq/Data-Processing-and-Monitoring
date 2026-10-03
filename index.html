@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lesson 4 — Real-Time Data Processing and Monitoring</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1B2B; --panel:#152941; --panel2:#1B3350;
+    --ink:#EAF2F5; --ink-dim:#93A9BD;
+    --wire:#38BDF8; --led:#4ADE80; --warn:#F5A15C; --bad:#F2607A;
+    --line: rgba(234,242,245,0.14);
+    --code-bg:#0A141F;
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  :root[data-theme="dark"]{ --bg:#0F1B2B; }
+  html{scroll-padding-top:76px;}
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; line-height:1.6; }
+  .wrap{ max-width:900px; margin:0 auto; padding: 0 6vw 100px; }
+  header.top{
+    position:sticky; top:0; z-index:10; background:rgba(15,27,43,0.92); backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line); padding: calc(env(safe-area-inset-top,0px) + 14px) 6vw 14px;
+  }
+  header.top .tt{ font-family:'JetBrains Mono',monospace; font-size:0.85rem; color:var(--wire); font-weight:600; }
+  nav.toc{ display:flex; gap:14px; flex-wrap:wrap; margin-top:8px; }
+  nav.toc a{ font-size:0.8rem; color:var(--ink-dim); text-decoration:none; font-family:'JetBrains Mono',monospace; }
+  nav.toc a:hover{ color:var(--led); }
+  .hero{ padding:40px 0 10px; }
+  .hero .eyebrow{ font-family:'JetBrains Mono',monospace; color:var(--wire); font-size:0.85rem; margin-bottom:10px; }
+  h1{ font-size:clamp(1.8rem,5vw,2.6rem); margin:0 0 12px; font-weight:800; }
+  h2{ font-size:1.5rem; font-weight:700; margin:48px 0 14px; padding-top:14px; border-top:1px solid var(--line); }
+  h2 .num{ color:var(--led); font-family:'JetBrains Mono',monospace; margin-right:8px; }
+  h3{ font-size:1.1rem; font-weight:700; margin:22px 0 10px; color:var(--ink); }
+  p{ color:var(--ink-dim); margin:0 0 14px; max-width:68ch; }
+  ul.pts, ol.pts{ margin:0 0 14px; padding-left:0; list-style:none; }
+  ul.pts li{ position:relative; padding-left:24px; margin-bottom:10px; color:var(--ink); max-width:62ch; }
+  ul.pts li::before{ content:""; position:absolute; left:0; top:0.55em; width:8px; height:8px; border:2px solid var(--led); border-radius:50%; }
+  ol.pts{ counter-reset:step; }
+  ol.pts li{ position:relative; padding-left:30px; margin-bottom:10px; color:var(--ink); max-width:62ch; }
+  ol.pts li::before{ counter-increment:step; content:counter(step); position:absolute; left:0; top:0; width:20px; height:20px; border-radius:50%; background:var(--panel2); color:var(--led); font-family:'JetBrains Mono',monospace; font-size:0.7rem; display:flex; align-items:center; justify-content:center; }
+  .code{ background:var(--code-bg); border:1px solid var(--line); border-radius:10px; padding:16px 18px; font-family:'JetBrains Mono',monospace; font-size:0.85rem; color:#CDE7F0; overflow-x:auto; margin:10px 0 18px; white-space:pre; }
+  .code .c{ color:var(--ink-dim); } .code .k{ color:var(--wire); } .code .s{ color:var(--led); } .code .w{ color:var(--warn); }
+  .key{ border-left:3px solid var(--led); background:rgba(74,222,128,0.08); padding:12px 16px; border-radius:0 10px 10px 0; margin:16px 0; }
+  .key b{ color:var(--led); }
+  .warn{ border-left:3px solid var(--warn); background:rgba(245,161,92,0.08); padding:12px 16px; border-radius:0 10px 10px 0; margin:16px 0; }
+  .warn b{ color:var(--warn); }
+  table.ref{ border-collapse:collapse; width:100%; margin:10px 0 20px; font-size:0.92rem; }
+  table.ref th, table.ref td{ border:1px solid var(--line); padding:9px 12px; text-align:left; }
+  table.ref th{ background:var(--panel2); color:var(--wire); font-family:'JetBrains Mono',monospace; font-size:0.78rem; }
+  table.ref td{ color:var(--ink-dim); }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+  @media (max-width:640px){ .grid2, .grid3{ grid-template-columns:1fr; } }
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 18px; }
+  .card .n{ font-family:'JetBrains Mono',monospace; color:var(--led); font-size:0.78rem; margin-bottom:6px; }
+  .flow{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:16px 0 22px; }
+  .flow .step{ background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px 16px; font-family:'JetBrains Mono',monospace; font-size:0.82rem; color:var(--ink); }
+  .flow .arrow{ color:var(--ink-dim); }
+
+  /* Activity widgets */
+  .activity{ background:var(--panel); border:1px solid var(--wire); border-radius:12px; padding:20px 22px; margin:18px 0 26px; }
+  .activity .tag{ font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:var(--wire); margin-bottom:10px; letter-spacing:0.04em; }
+  .q{ margin-bottom:18px; }
+  .q p.prompt{ color:var(--ink); font-weight:600; margin-bottom:10px; }
+  .opts{ display:flex; flex-direction:column; gap:8px; }
+  .opt{ text-align:left; background:var(--code-bg); border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:10px 14px; cursor:pointer; font-family:'Inter',sans-serif; font-size:0.95rem; }
+  .opt:hover{ border-color:var(--wire); }
+  .opt.correct{ border-color:var(--led); background:rgba(74,222,128,0.12); color:var(--led); }
+  .opt.wrong{ border-color:var(--bad); background:rgba(242,96,122,0.12); color:var(--bad); }
+  .fb{ margin-top:8px; font-size:0.88rem; color:var(--ink-dim); display:none; }
+  .fb.show{ display:block; }
+
+  .blankcode{ background:var(--code-bg); border:1px solid var(--line); border-radius:10px; padding:16px 18px; font-family:'JetBrains Mono',monospace; font-size:0.85rem; color:#CDE7F0; line-height:2; white-space:pre-wrap; }
+  .blank{ display:inline-block; width:80px; background:var(--panel2); border:1px solid var(--wire); border-radius:4px; color:var(--led); font-family:'JetBrains Mono',monospace; font-size:0.85rem; padding:2px 6px; text-align:center; }
+  .checkbtn{ margin-top:14px; background:var(--led); color:#0A141F; border:none; font-weight:700; border-radius:8px; padding:10px 20px; font-family:'Inter',sans-serif; font-size:0.9rem; cursor:pointer; }
+  .checkbtn:hover{ filter:brightness(1.08); }
+  .result{ margin-top:10px; font-size:0.88rem; font-weight:600; display:none; }
+  .result.show{ display:block; }
+
+  /* Live threshold demo */
+  .demo{ background:var(--code-bg); border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin:12px 0 20px; }
+  .demo label{ font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:var(--ink-dim); display:block; margin-bottom:8px; }
+  .demo input[type=range]{ width:100%; }
+  .demo .readout{ display:flex; justify-content:space-between; align-items:center; margin-top:12px; }
+  .demo .val{ font-family:'JetBrains Mono',monospace; font-size:1.3rem; color:var(--ink); }
+  .statepill{ font-family:'JetBrains Mono',monospace; font-size:0.8rem; font-weight:700; padding:6px 14px; border-radius:20px; }
+  .statepill.normal{ background:rgba(74,222,128,0.15); color:var(--led); }
+  .statepill.warning{ background:rgba(245,161,92,0.15); color:var(--warn); }
+  .statepill.critical{ background:rgba(242,96,122,0.15); color:var(--bad); }
+
+  footer{ text-align:center; color:var(--ink-dim); font-size:0.8rem; padding:30px 0 10px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="tt">🛰️ ARDUINO · GRADE 10 · LESSON 4</div>
+  <nav class="toc">
+    <a href="#intro">Overview</a>
+    <a href="#processing">1. Processing</a>
+    <a href="#monitoring">2. Monitoring</a>
+    <a href="#combined">3. Full Example</a>
+    <a href="#vocab">4. Vocabulary</a>
+    <a href="#quiz">5. Quiz</a>
+    <a href="#fillblank">6. Code Challenge</a>
+    <a href="#tryit">7. Try This</a>
+  </nav>
+</header>
+
+<div class="wrap">
+
+  <section class="hero" id="intro">
+    <div class="eyebrow">COMPLETE STUDENT HANDOUT</div>
+    <h1>Lesson 4: Real-Time Data Processing and Monitoring</h1>
+    <p>Collecting data is only step one. This lesson covers turning raw, noisy sensor readings into meaningful information — and watching that information continuously to detect, alert, and respond to real-world conditions.</p>
+    <div class="flow">
+      <div class="step">📥 Collect</div><div class="arrow">→</div>
+      <div class="step">⚙️ Process</div><div class="arrow">→</div>
+      <div class="step">👁️ Monitor</div><div class="arrow">→</div>
+      <div class="step">🔔 Respond</div>
+    </div>
+    <div class="key"><b>Processing</b> transforms raw data into useful information (filtering, scaling, statistics). <b>Monitoring</b> continuously checks that information against conditions and triggers a response.</div>
+  </section>
+
+  <h2 id="processing"><span class="num">01</span>Processing Raw Sensor Data</h2>
+
+  <h3>Why raw readings need processing</h3>
+  <p>A raw sensor reading is rarely ready to use directly. It may jump around due to electrical noise, arrive in units that mean nothing to a human (like a 0–1023 ADC value), or need to be summarized across many readings instead of read one at a time.</p>
+
+  <h3>Smoothing noisy data: the moving average filter</h3>
+  <p>A single reading can spike due to noise. A <strong>moving average filter</strong> keeps the last N readings and reports their average instead of the raw value — spikes get diluted rather than trusted outright.</p>
+  <div class="code"><span class="k">const int</span> N = 5;
+<span class="k">float</span> samples[N];
+<span class="k">int</span> idx = 0;
+
+<span class="k">float</span> smooth(<span class="k">float</span> newVal) {
+  samples[idx % N] = newVal;
+  idx++;
+  <span class="k">float</span> sum = 0;
+  <span class="k">for</span> (<span class="k">int</span> i = 0; i &lt; N; i++) sum += samples[i];
+  <span class="k">return</span> sum / N;
+}</div>
+  <div class="key"><b>Key idea:</b> a moving average trades a little bit of responsiveness for a lot of stability — the bigger N is, the smoother (but slower to react) the result.</div>
+
+  <h3>Scaling raw values with map()</h3>
+  <p>Arduino's analog pins return 0–1023 regardless of what's plugged in. <code>map()</code> converts that raw range into a range that actually means something — degrees, percent, volts.</p>
+  <div class="code"><span class="k">int</span> raw = analogRead(A0);                  <span class="c">// 0–1023</span>
+<span class="k">float</span> voltage = raw * (3.3 / 1023.0);     <span class="c">// 0.0–3.3 V</span>
+<span class="k">int</span> percent = map(raw, 0, 1023, 0, 100);  <span class="c">// 0–100 %</span></div>
+
+  <h3>Running statistics without storing everything</h3>
+  <p>Min, max, and average don't require keeping every reading ever taken — only the running result updates each time a new value arrives.</p>
+  <div class="code"><span class="k">float</span> runningMax = -9999;
+<span class="k">float</span> runningMin = 9999;
+<span class="k">float</span> runningSum = 0;
+<span class="k">int</span> count = 0;
+
+<span class="k">void</span> update(<span class="k">float</span> value) {
+  <span class="k">if</span> (value &gt; runningMax) runningMax = value;
+  <span class="k">if</span> (value &lt; runningMin) runningMin = value;
+  runningSum += value;
+  count++;
+}
+<span class="c">// average = runningSum / count</span></div>
+
+  <h2 id="monitoring"><span class="num">02</span>Monitoring &amp; Responding to Conditions</h2>
+
+  <h3>Threshold detection — the simplest monitor</h3>
+  <p>The core of monitoring is a comparison: is the processed value inside an acceptable range? If not, trigger a response.</p>
+  <div class="code"><span class="k">const float</span> TEMP_LIMIT = 30.0;
+
+<span class="k">if</span> (smoothedTemp &gt; TEMP_LIMIT) {
+  digitalWrite(BUZZER_PIN, HIGH);
+  Serial.println(<span class="s">"ALERT: temperature too high"</span>);
+} <span class="k">else</span> {
+  digitalWrite(BUZZER_PIN, LOW);
+}</div>
+
+  <h3>Try it: threshold monitoring, live</h3>
+  <p>Drag the slider to simulate a smoothed sensor reading and watch the monitoring state respond — this is exactly the logic the code above runs every loop.</p>
+  <div class="demo">
+    <label for="tempSlider">Simulated smoothed temperature (°C)</label>
+    <input type="range" id="tempSlider" min="15" max="45" value="24" step="1">
+    <div class="readout">
+      <span class="val" id="tempVal">24°C</span>
+      <span class="statepill normal" id="statePill">NORMAL</span>
+    </div>
+  </div>
+
+  <h3>State-based monitoring (with hysteresis)</h3>
+  <p>A single threshold can "flicker" if the value hovers right at the limit. Real monitors usually use multiple states — and sometimes a different threshold to enter vs. leave a state — so the system doesn't rapidly switch back and forth.</p>
+  <div class="code"><span class="k">enum</span> State { NORMAL, WARNING, CRITICAL };
+State current = NORMAL;
+
+<span class="k">void</span> updateState(<span class="k">float</span> temp) {
+  <span class="k">if</span> (temp &gt; 35) current = CRITICAL;
+  <span class="k">else if</span> (temp &gt; 28) current = WARNING;
+  <span class="k">else if</span> (temp &lt; 26) current = NORMAL;  <span class="c">// lower re-entry point avoids flicker</span>
+}</div>
+
+  <h3>Debouncing digital monitoring signals</h3>
+  <p>Digital inputs (a button, a motion sensor) can briefly flicker between HIGH and LOW during a single physical change. Debouncing ignores changes that happen too soon after the last one.</p>
+  <div class="code"><span class="k">unsigned long</span> lastChange = 0;
+<span class="k">const long</span> debounceDelay = 50;
+<span class="k">int</span> lastState = LOW;
+
+<span class="k">void</span> checkInput() {
+  <span class="k">int</span> reading = digitalRead(SENSOR_PIN);
+  <span class="k">if</span> (reading != lastState &amp;&amp; millis() - lastChange &gt; debounceDelay) {
+    lastChange = millis();
+    lastState = reading;
+    <span class="c">// react to the confirmed change here</span>
+  }
+}</div>
+
+  <h2 id="combined"><span class="num">03</span>Putting It Together</h2>
+  <p>A full monitoring sketch chains everything above: collect → smooth → classify into a state → respond, with the LCD showing the current state at a glance.</p>
+  <div class="code"><span class="k">void</span> loop() {
+  <span class="k">if</span> (millis() - lastRead >= 2000) {
+    <span class="k">float</span> raw = analogRead(A0) * (3.3/1023.0) * 100;  <span class="c">// scale to °C</span>
+    <span class="k">float</span> temp = smooth(raw);                        <span class="c">// filter noise</span>
+    updateState(temp);                                 <span class="c">// classify</span>
+
+    lcd.clear();
+    lcd.setCursor(0,0); lcd.print(temp);
+    lcd.setCursor(0,1);
+    <span class="k">if</span> (current == CRITICAL) lcd.print(<span class="s">"CRITICAL!"</span>);
+    <span class="k">else if</span> (current == WARNING) lcd.print(<span class="s">"Warning"</span>);
+    <span class="k">else</span> lcd.print(<span class="s">"Normal"</span>);
+
+    lastRead = millis();
+  }
+}</div>
+
+  <h2 id="vocab"><span class="num">04</span>Key Vocabulary</h2>
+  <table class="ref">
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td>Processing</td><td>Transforming raw data into meaningful information (filtering, scaling, statistics).</td></tr>
+    <tr><td>Monitoring</td><td>Continuously checking processed data against conditions and responding.</td></tr>
+    <tr><td>Moving average filter</td><td>Smooths noisy readings by averaging the last N values instead of trusting one.</td></tr>
+    <tr><td><code>map()</code></td><td>Rescales a value from one numeric range into another.</td></tr>
+    <tr><td>Threshold</td><td>A boundary value that separates acceptable from unacceptable readings.</td></tr>
+    <tr><td>Hysteresis</td><td>Using different thresholds to enter vs. leave a state, to prevent flickering.</td></tr>
+    <tr><td>Debounce</td><td>Ignoring rapid, spurious changes in a digital signal right after a real change.</td></tr>
+  </table>
+
+  <h2 id="quiz"><span class="num">05</span>Interactive Quiz</h2>
+  <div class="activity">
+    <div class="tag">CHECK YOUR UNDERSTANDING · 4 QUESTIONS</div>
+
+    <div class="q" data-answer="1">
+      <p class="prompt">1. What does a moving average filter trade away in exchange for smoother readings?</p>
+      <div class="opts">
+        <button class="opt" data-i="0">Memory usage</button>
+        <button class="opt" data-i="1">Responsiveness to sudden real changes</button>
+        <button class="opt" data-i="2">Accuracy of the analog pin itself</button>
+      </div>
+      <div class="fb"></div>
+    </div>
+
+    <div class="q" data-answer="2">
+      <p class="prompt">2. Why use hysteresis (different enter/exit thresholds) in state-based monitoring?</p>
+      <div class="opts">
+        <button class="opt" data-i="0">It saves battery power</button>
+        <button class="opt" data-i="1">It's required by the map() function</button>
+        <button class="opt" data-i="2">It stops the state from flickering when the value hovers near one threshold</button>
+      </div>
+      <div class="fb"></div>
+    </div>
+
+    <div class="q" data-answer="0">
+      <p class="prompt">3. map(raw, 0, 1023, 0, 100) converts a raw analog value into what?</p>
+      <div class="opts">
+        <button class="opt" data-i="0">A 0–100 scaled value, like a percentage</button>
+        <button class="opt" data-i="1">A boolean true/false</button>
+        <button class="opt" data-i="2">A millisecond timestamp</button>
+      </div>
+      <div class="fb"></div>
+    </div>
+
+    <div class="q" data-answer="1">
+      <p class="prompt">4. A button reading flickers between HIGH and LOW for a few milliseconds when pressed. What technique fixes this?</p>
+      <div class="opts">
+        <button class="opt" data-i="0">A moving average filter</button>
+        <button class="opt" data-i="1">Debouncing</button>
+        <button class="opt" data-i="2">Running statistics</button>
+      </div>
+      <div class="fb"></div>
+    </div>
+  </div>
+
+  <h2 id="fillblank"><span class="num">06</span>Code Challenge: Complete the State Monitor</h2>
+  <div class="activity">
+    <div class="tag">FILL IN THE BLANKS, THEN CHECK</div>
+    <p style="color:var(--ink-dim); margin-bottom:6px;">Complete the threshold logic so the system enters WARNING above 28°C and CRITICAL above 35°C.</p>
+    <div class="blankcode">enum State { NORMAL, WARNING, CRITICAL };
+State current = NORMAL;
+
+void updateState(float temp) {
+  if (temp > <input class="blank" data-ans="35" size="4">) current = CRITICAL;
+  else if (temp > <input class="blank" data-ans="28" size="4">) current = WARNING;
+  else if (temp < 26) current = <input class="blank" data-ans="NORMAL" size="8">;
+}</div>
+    <button class="checkbtn" id="checkBlanks">Check Answers</button>
+    <div class="result" id="blankResult"></div>
+  </div>
+
+  <h2 id="tryit"><span class="num">07</span>Try This</h2>
+  <ol class="pts">
+    <li>Change the moving average filter's N from 5 to 15 and describe how the response feels different.</li>
+    <li>Add a fourth state, EMERGENCY, above 40°C, with its own LCD message and a faster buzzer pattern.</li>
+    <li>Use <code>map()</code> to scale a light sensor's raw reading into a 0–100 "brightness %" value.</li>
+    <li>Add debounce logic to a pushbutton that toggles monitoring on and off.</li>
+    <li>Predict, then test: what happens to the state monitor if you remove the hysteresis gap (use 28 for both enter and exit)?</li>
+  </ol>
+
+  <footer>Grade 10 · Computer — Lesson 4: Real-Time Data Processing and Monitoring</footer>
+</div>
+
+<script>
+  // Quiz logic
+  document.querySelectorAll('.q').forEach(q => {
+    const correct = q.dataset.answer;
+    const fb = q.querySelector('.fb');
+    q.querySelectorAll('.opt').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.classList.contains('correct') || btn.classList.contains('wrong')) return;
+        const isRight = btn.dataset.i === correct;
+        btn.classList.add(isRight ? 'correct' : 'wrong');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.dataset.i === correct) b.classList.add('correct');
+          b.disabled = true;
+        });
+        fb.textContent = isRight
+          ? "Correct — that's exactly right."
+          : "Not quite — the highlighted option above is correct.";
+        fb.classList.add('show');
+      });
+    });
+  });
+
+  // Fill-in-the-blank checker
+  document.getElementById('checkBlanks').addEventListener('click', () => {
+    const blanks = document.querySelectorAll('.blank');
+    let allCorrect = true;
+    blanks.forEach(b => {
+      const val = b.value.trim().toUpperCase();
+      const ans = b.dataset.ans.trim().toUpperCase();
+      if (val === ans) {
+        b.style.borderColor = 'var(--led)';
+        b.style.color = 'var(--led)';
+      } else {
+        b.style.borderColor = 'var(--bad)';
+        b.style.color = 'var(--bad)';
+        allCorrect = false;
+      }
+    });
+    const result = document.getElementById('blankResult');
+    result.textContent = allCorrect
+      ? "✓ All correct — CRITICAL at 35, WARNING at 28, back to NORMAL below 26."
+      : "✗ One or more blanks need another look — check the threshold values and the state name.";
+    result.style.color = allCorrect ? 'var(--led)' : 'var(--warn)';
+    result.classList.add('show');
+  });
+
+  // Live threshold demo
+  const slider = document.getElementById('tempSlider');
+  const tempVal = document.getElementById('tempVal');
+  const pill = document.getElementById('statePill');
+  function renderDemo() {
+    const t = parseInt(slider.value, 10);
+    tempVal.textContent = t + '°C';
+    let state = 'normal', label = 'NORMAL';
+    if (t > 35) { state = 'critical'; label = 'CRITICAL'; }
+    else if (t > 28) { state = 'warning'; label = 'WARNING'; }
+    pill.className = 'statepill ' + state;
+    pill.textContent = label;
+  }
+  slider.addEventListener('input', renderDemo);
+  renderDemo();
+</script>
+</body>
+</html>
